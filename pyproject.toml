@@ -1,0 +1,66 @@
+[tool.poetry]
+name = "search-index-management"
+version = "1.0.0"
+description = "A pair of FastAPI microservices for managing LanceDB search indices with Azure OpenAI embeddings for financial data analysis"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "shared"}, {include = "writer"}, {include = "reader"}, {include = "clients"}]
+package-mode = false
+
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.104.1"
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
+azure-search-documents = "11.6.0b8"
+gunicorn = "^21.2.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.0.0"
+python-multipart = "^0.0.6"
+httpx = {extras = ["http2"], version = "^0.28.1"}
+openai = "^1.3.9"
+azure-identity = "^1.15.0"
+pandas = "^2.1.4"
+numpy = "^1.25.2"
+lancedb = "^0.24.0"
+requests = "^2.31.0"
+python-dotenv = "^1.0.0"
+structlog = "^23.2.0"
+tantivy = "^0.24.0"
+azure-storage-blob = "^12.25.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+black = "^23.0.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+mypy = "^1.5.0"
+ipykernel = "^6.29.5"
+psutil = "^5.9.0"
+click = "^8.1.0"
+rich = "^13.0.0"
+matplotlib = "^3.7.0"
+plotly = "^5.17.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+writer = "writer.main:main"
+reader = "reader.main:main"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
