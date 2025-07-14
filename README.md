@@ -33,27 +33,7 @@ This system consists of two complementary microservices:
 
 ### Environment Setup
 
-1. **Copy environment file:**
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Configure environment variables in `.env`:**
-   ```bash
-   # Azure OpenAI
-   AZURE_OPENAI_EMBEDDING_ENDPOINT=https://your-instance.openai.azure.com/
-   AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME=text-embedding-ada-002
-   
-   # Azure Authentication
-   AZURE_CLIENT_ID=your-client-id
-   AZURE_CLIENT_SECRET=your-client-secret
-   AZURE_TENANT_ID=your-tenant-id
-   
-   # Vena API
-   VENA_ENDPOINT=https://your-vena-instance.com
-   VENA_USER=your-username
-   VENA_KEY=your-api-key
-   ```
+1. **Configure environment variables in `.env` based on the example values in `.env.example`.
 
 ### Development Setup
 
@@ -104,6 +84,54 @@ This system consists of two complementary microservices:
    curl http://localhost:8002/api/health
    ```
 
+### Development Tools
+
+Install development dependencies:
+```bash
+poetry install --with dev
+```
+
+Format code:
+```bash
+poetry run black .
+poetry run isort .
+```
+
+Run type checking:
+```bash
+poetry run mypy .
+```
+
+Run linting:
+```bash
+poetry run flake8 .
+```
+
+Run tests:
+```bash
+poetry run pytest
+```
+
+Using Poetry scripts (alternative to cd + python main.py):
+```bash
+poetry run writer    # Start writer service
+poetry run reader    # Start reader service
+```
+
+### Benchmarking
+
+The project includes performance benchmarking tools:
+
+```bash
+# Run reader service benchmarks
+python benchmarks/benchmark_reader_service.py
+
+# View benchmark results
+ls benchmarks/benchmark_*/
+```
+
+Benchmark results are saved with HTML dashboards and CSV metrics for analysis.
+
 ## API Documentation
 
 ### Writer Service Endpoints
@@ -122,7 +150,13 @@ Create a new LanceDB table from Vena model hierarchy data.
 
 **Example:**
 ```bash
-curl -X POST \"http://localhost:8001/api/tenants/default/models/123?force_recreate=true\"
+curl -X POST "http://localhost:8001/api/tenants/default/models/123?force_recreate=true" \
+  -H "Authorization: Bearer your-token"
+```
+
+#### List Tenants
+```http
+GET /api/tenants
 ```
 
 #### List Tables
@@ -150,18 +184,18 @@ POST /api/tenants/{tenant_id}/models/{model_id}/search
 **Request Body:**
 ```json
 {
-  \"query\": \"revenue sales income\",
-  \"limit\": 10,
-  \"dimension_filter\": \"Account\",
-  \"min_score\": 0.7
+  "query": "revenue sales income",
+  "limit": 10,
+  "dimension_filter": "Account",
+  "min_score": 0.7
 }
 ```
 
 **Example:**
 ```bash
-curl -X POST \"http://localhost:8002/api/tenants/default/models/123/search\" \\
-  -H \"Content-Type: application/json\" \\
-  -d '{\"query\": \"revenue\", \"limit\": 5}'
+curl -X POST "http://localhost:8002/api/tenants/default/models/123/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "revenue", "limit": 5}'
 ```
 
 ## Client Libraries
@@ -232,10 +266,11 @@ The services support multi-tenancy through tenant-specific database paths, URI-b
 **Example:**
 ```bash
 # Create tables for different tenants
-curl -X POST \"http://localhost:8001/api/tenants/client_a/models/123\"
-curl -X POST \"http://localhost:8002/api/tenants/client_a/models/123/search\" \\
-  -H \"Content-Type: application/json\" \\
-  -d '{\"query\": \"revenue\", \"limit\": 5}'
+curl -X POST "http://localhost:8001/api/tenants/client_a/models/123" \
+  -H "Authorization: Bearer your-token"
+curl -X POST "http://localhost:8002/api/tenants/client_a/models/123/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "revenue", "limit": 5}'
 ```
 
 ## Performance Considerations
@@ -323,25 +358,49 @@ docker-compose up -d
 
 ### Project Structure
 ```
-search-index-management/
-├── shared/                 # Shared models and utilities
-│   ├── config.py          # Configuration management
-│   ├── database.py        # LanceDB connection handling
-│   └── models.py          # Pydantic models
-├── writer/                # Writer service
-│   ├── api/endpoints.py   # REST endpoints
-│   ├── services/          # Business logic
-│   └── main.py           # FastAPI application
-├── reader/                # Reader service
-│   ├── api/endpoints.py   # REST endpoints
-│   ├── services/          # Search logic
-│   └── main.py           # FastAPI application
-├── clients/               # HTTP client libraries
-│   ├── writer_client.py   # Writer service client
-│   └── reader_client.py   # Reader service client
-├── docker-compose.yml     # Container orchestration
-├── pyproject.toml         # Poetry configuration and dependencies
-└── poetry.lock           # Poetry lock file (generated)
+search-index-bakeoff/
+├── shared/                    # Shared models and utilities
+│   ├── config.py             # Configuration management
+│   ├── database.py           # LanceDB connection handling
+│   ├── models.py             # Pydantic models
+│   ├── auth.py               # Authentication utilities
+│   ├── embedding_service.py  # Azure OpenAI embedding service
+│   ├── vena_service.py       # Vena API integration
+│   └── storage/              # Storage backend implementations
+│       ├── base.py           # Base storage interface
+│       ├── local_file.py     # Local file storage
+│       ├── azure_blob.py     # Azure Blob storage
+│       └── lancedb_cloud.py  # LanceDB Cloud storage
+├── writer/                   # Writer service (Port 8001)
+│   ├── api/
+│   │   ├── endpoints.py      # Table management endpoints
+│   │   └── models.py         # Model-related endpoints
+│   ├── services/
+│   │   ├── hierarchy_writer_service.py  # Hierarchy data processing
+│   │   └── table_service.py  # Table operations
+│   ├── main.py               # FastAPI application
+│   ├── Dockerfile            # Container configuration
+│   └── gunicorn_config.py    # Production server config
+├── reader/                   # Reader service (Port 8002)
+│   ├── api/
+│   │   ├── endpoints.py      # General endpoints
+│   │   └── models.py         # Search endpoints
+│   ├── services/
+│   │   ├── hierarchy_search_service.py       # Local LanceDB search
+│   │   └── hierarchy_search_service_azure.py # Azure AI Search
+│   ├── main.py               # FastAPI application
+│   ├── Dockerfile            # Container configuration
+│   └── gunicorn_config.py    # Production server config
+├── clients/                  # HTTP client libraries
+│   ├── writer_client.py      # Writer service client (sync/async)
+│   └── reader_client.py      # Reader service client (sync/async)
+├── benchmarks/               # Performance benchmarking
+│   └── benchmark_reader_service.py
+├── docker-compose.yml        # Container orchestration
+├── pyproject.toml           # Poetry configuration and dependencies
+├── poetry.lock              # Poetry lock file (generated)
+├── CLAUDE.md                # Claude Code instructions
+└── search_index_exploration.ipynb  # Jupyter notebook for exploration
 ```
 
 ### Testing
@@ -350,12 +409,13 @@ Run the services locally and test with curl:
 
 ```bash
 # Test writer service
-curl -X POST \"http://localhost:8001/api/tenants/test/models/123\"
+curl -X POST "http://localhost:8001/api/tenants/test/models/123" \
+  -H "Authorization: Bearer your-token"
 
 # Test reader service
-curl -X POST \"http://localhost:8002/api/tenants/test/models/123/search\" \\
-  -H \"Content-Type: application/json\" \\
-  -d '{\"query\": \"test\", \"limit\": 5}'
+curl -X POST "http://localhost:8002/api/tenants/test/models/123/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "test", "limit": 5}'
 ```
 
 ### Contributing
